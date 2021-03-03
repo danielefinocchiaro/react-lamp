@@ -69,22 +69,20 @@ function reducer(state: Data[], action: action) {
   switch (action.type) {
     case 'MoveUp':
       if (action.index !== 0) {
-        state = arrayMove(state, action.index, action.index - 1);
+        return arrayMove(state, action.index, action.index - 1);
       }
       break;
     case 'MoveDown':
       if (action.index !== state.length) {
-        state = arrayMove(state, action.index, action.index + 1);
+        return arrayMove(state, action.index, action.index + 1);
       }
       break;
     case 'Remove':
-      return (state = state.filter((p, i) => i != action.index));
-      break;
+      return state.filter((p, i) => i != action.index);
     case 'Add':
       let person = { name: faker.name.findName(), favorite: false };
-      state.push(person);
-      console.log(state);
-      break;
+      let newState = [...state, person];
+      return newState;
   }
   return state;
 }
@@ -121,7 +119,7 @@ function App(props: P) {
       })}
       <div
         className="m-1 cursor-pointer bg-blue-300 rounded p-1"
-        onClick={() => dispatch({ type: 'Add', index: NaN })}
+        onClick={() => dispatch({ type: 'Add', index: 0 })}
       >
         Add
       </div>
