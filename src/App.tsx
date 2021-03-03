@@ -65,35 +65,33 @@ interface action {
   index: number;
 }
 
-let peopleArr = new Array(20).fill({}).map(() => ({
-  name: faker.name.findName(),
-  favorite: false,
-}));
-
-const [people, dispatch] = useReducer(reducer, peopleArr);
-
 function reducer(state: Data[], action: action) {
   switch (action.type) {
     case 'MoveUp':
       if (action.index !== 0) {
         state = arrayMove(state, action.index, action.index - 1);
-        return state;
       }
     case 'MoveDown':
       if (action.index !== state.length) {
         state = arrayMove(state, action.index, action.index + 1);
-        return state;
       }
     case 'Remove':
       return (state = state.filter((p, i) => i != action.index));
     case 'Add':
       let person = { name: faker.name.findName(), favorite: false };
       state.push(person);
-      return state;
   }
+  return state;
 }
 
 function App(props: P) {
+  let peopleArr = new Array(20).fill({}).map(() => ({
+    name: faker.name.findName(),
+    favorite: false,
+  }));
+
+  const [people, dispatch] = useReducer(reducer, peopleArr);
+
   return (
     <div className="flex flex-col">
       {people.map((p: Data, i: number) => {
