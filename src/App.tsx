@@ -1,39 +1,127 @@
-import React, { useState, useEffect } from 'react';
-import logo from './logo.svg';
-import './App.css';
+import React, { useState, useReducer } from 'react';
+import arrayMove from 'array-move';
+import classNames from 'classnames';
 
-interface AppProps {}
+import * as Icons from 'heroicons-react';
 
-function App({}: AppProps) {
-  // Create the count state.
-  const [count, setCount] = useState(0);
-  // Create the counter (+1 every second).
-  useEffect(() => {
-    const timer = setTimeout(() => setCount(count + 1), 1000);
-    return () => clearTimeout(timer);
-  }, [count, setCount]);
-  // Return the App component.
+import faker from 'faker';
+
+interface P {}
+
+interface Button {
+  text: string;
+  onClick: () => void;
+}
+
+interface Data {
+  name: string;
+  favorite: boolean;
+}
+
+interface Element {
+  btnUp: Button;
+  btnDown: Button;
+  btnRemove: Button;
+  data: Data;
+}
+
+function ButtonAction(props: Button) {
+  const style = classNames(
+    'm-1 cursor-pointer rounded p-1',
+    props.text === 'Remove' ? 'bg-red-300' : 'bg-green-300',
+  );
   return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <p>
-          Page has been open for <code>{count}</code> seconds.
-        </p>
-        <p>
-          <a
-            className="App-link"
-            href="https://reactjs.org"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Learn React
-          </a>
-        </p>
-      </header>
+    <div className={style} onClick={props.onClick}>
+      {props.text}
+    </div>
+  );
+}
+
+function Element(props: Element) {
+  const [style, setStyle] = useState(props.data.favorite);
+  const styleElement = classNames(
+    'flex items-center mx-1',
+    props.data.favorite ? 'bg-yellow-200' : '',
+  );
+  return (
+    <div className={styleElement}>
+      <div className="flex-grow">{props.data.name}</div>
+      <Icons.StarOutline
+        onClick={() => {
+          setStyle(!props.data.favorite);
+          console.log('click ' + style);
+        }}
+        className="cursor-pointer"
+      />
+      <ButtonAction {...props.btnUp} />
+      <ButtonAction {...props.btnDown} />
+      <ButtonAction {...props.btnRemove} />
+    </div>
+  );
+}
+
+interface action {
+  type: string;
+  index: number;
+}
+
+let peopleArr = new Array(20).fill({}).map(() => ({
+  name: faker.name.findName(),
+  favorite: false,
+}));
+
+const [people, dispatch] = useReducer(reducer, peopleArr);
+
+function reducer(state: Data[], action: action) {
+  switch (action.type) {
+    case 'MoveUp':
+      if (action.index !== 0) {
+        state = arrayMove(state, action.index, action.index - 1);
+        return state;
+      }
+    case 'MoveDown':
+      if (action.index !== state.length) {
+        state = arrayMove(state, action.index, action.index + 1);
+        return state;
+      }
+    case 'Remove':
+      return (state = state.filter((p, i) => i != action.index));
+    case 'Add':
+      let person = { name: faker.name.findName(), favorite: false };
+      state.push(person);
+      return state;
+  }
+}
+
+function App(props: P) {
+  return (
+    <div className="flex flex-col">
+      {people.map((p: Data, i: number) => {
+        return (
+          <Element
+            data={p}
+            btnUp={{
+              text: 'Up',
+              onClick: () => dispatch({ type: 'MoveUp', index: i }),
+            }}
+            btnDown={{
+              text: 'Down',
+              onClick: () => dispatch({ type: 'MoveDown', index: i }),
+            }}
+            btnRemove={{
+              text: 'Remove',
+              onClick: () => dispatch({ type: 'Remove', index: i }),
+            }}
+            key={i}
+          />
+        );
+      })}
+      <div
+        className="m-1 cursor-pointer bg-blue-300 rounded p-1"
+        onClick={() => dispatch({ type: 'MoveUp', index: 0 })}
+      >
+        Add
+      </div>
     </div>
   );
 }
