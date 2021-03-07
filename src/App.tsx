@@ -1,6 +1,7 @@
 import React, { useState, useReducer } from 'react';
 import arrayMove from 'array-move';
 import classNames from 'classnames';
+import _ from 'lodash/fp';
 
 import * as Icons from 'heroicons-react';
 
@@ -22,7 +23,9 @@ interface Element {
   btnUp: Button;
   btnDown: Button;
   btnRemove: Button;
+  btnFavorite: () => void;
   data: Data;
+  index: number;
 }
 
 function ButtonAction(props: Button) {
@@ -38,19 +41,16 @@ function ButtonAction(props: Button) {
 }
 
 function Element(props: Element) {
-  const [style, setStyle] = useState(props.data.favorite);
   const styleElement = classNames(
     'flex items-center mx-1',
     props.data.favorite ? 'bg-yellow-200' : '',
   );
+  console.log(props.data);
   return (
     <div className={styleElement}>
       <div className="flex-grow">{props.data.name}</div>
       <Icons.StarOutline
-        onClick={() => {
-          setStyle(!props.data.favorite);
-          console.log('click ' + style);
-        }}
+        onClick={props.btnFavorite}
         className="cursor-pointer"
       />
       <ButtonAction {...props.btnUp} />
@@ -83,6 +83,12 @@ function reducer(state: Data[], action: action) {
       let person = { name: faker.name.findName(), favorite: false };
       let newState = [...state, person];
       return newState;
+    case 'Favorite':
+      return _.update(
+        `${action.index}.favorite`,
+        (prev: boolean) => !prev,
+        state,
+      );
   }
   return state;
 }
@@ -101,6 +107,8 @@ function App(props: P) {
         return (
           <Element
             data={p}
+            index={i}
+            btnFavorite={() => dispatch({ type: 'Favorite', index: i })}
             btnUp={{
               text: 'Up',
               onClick: () => dispatch({ type: 'MoveUp', index: i }),
