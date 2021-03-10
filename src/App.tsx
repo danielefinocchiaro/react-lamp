@@ -26,7 +26,7 @@ function reducer(state: State, payload: Action) {
     case 'LAP':
       let str = `Lap ${state.laps.length}: ${state.seconds} seconds!`;
       const newLaps = [...state.laps, str];
-      state.laps = 0;
+      state.seconds = 0;
       return newLaps;
   }
   return state;
