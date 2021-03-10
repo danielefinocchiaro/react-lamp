@@ -5,11 +5,12 @@ import classNames from 'classnames';
 interface P {}
 
 function App(props: P) {
-  const [timer, setTimer] = useState(0);
+  const [state, dispatch] = useReducer(reducer, initialState, init);
+  const [timer, setTimer] = useState(true);
   const [pause, setPause] = useState(true);
   const [stop, setStop] = useState(false);
   const [laps, setLaps] = useState<string[]>([]);
-  const [state, setState] = useState('stop');
+  const [stato, setState] = useState('stop');
 
   interface Button {
     onClick: () => void;
@@ -31,7 +32,7 @@ function App(props: P) {
     return (
       <button
         className={style}
-        disabled={state === 'start' ? true : false}
+        disabled={stato === 'start' ? true : false}
         onClick={p.onClick}
       >
         {p.text}
@@ -47,7 +48,7 @@ function App(props: P) {
     return (
       <button
         className={style}
-        disabled={state === 'stop' ? true : false}
+        disabled={stato === 'stop' ? true : false}
         onClick={p.onClick}
       >
         Stop
@@ -59,11 +60,11 @@ function App(props: P) {
     const style = classNames(
       'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-blue-500',
     );
-    console.log(p.text);
+
     return (
       <button
         className={style}
-        disabled={state === 'stop' ? true : false}
+        disabled={stato === 'stop' ? true : false}
         onClick={p.onClick}
       >
         {p.text}
@@ -79,7 +80,7 @@ function App(props: P) {
     return (
       <button
         className={style}
-        disabled={state === 'stop' ? true : false}
+        disabled={stato === 'stop' ? true : false}
         onClick={p.onClick}
       >
         {p.text}
@@ -96,7 +97,7 @@ function App(props: P) {
     return (
       <button
         className={style}
-        disabled={state === 'stop' ? true : false}
+        disabled={stato === 'stop' ? true : false}
         onClick={p.onClick}
       >
         {p.text}
@@ -105,7 +106,6 @@ function App(props: P) {
   }
 
   useEffect(() => {
-    console.log(state === 'stop' ? true : false);
     if (pause) {
       return;
     }
