@@ -2,11 +2,43 @@ import React, { useState, useReducer, useEffect } from 'react';
 import _ from 'lodash/fp';
 import classNames from 'classnames';
 
-interface P {}
+interface State {
+  status: 'stopped' | 'started' | 'paused';
+  seconds: number;
+  laps: number[];
+}
 
-function App(props: P) {
-  const [state, dispatch] = useReducer(reducer, initialState, init);
-  const [timer, setTimer] = useState(true);
+interface Action {
+  type: 'START' | 'STOP' | 'PAUSE' | 'RESET' | 'LAP';
+  //payload: {};
+}
+
+function reducer(state: State, payload: Action) {
+  switch (payload.type) {
+    case 'START':
+      return;
+    case 'STOP':
+      return;
+    case 'PAUSE':
+      return;
+    case 'RESET':
+      return;
+    case 'LAP':
+      let str = `Lap ${state.laps.length}: ${state.seconds} seconds!`;
+      const newLaps = [...state.laps, str];
+      state.laps = 0;
+      return newLaps;
+  }
+  return state;
+}
+
+function App() {
+  const [state, dispatch] = useReducer(reducer, {
+    status: 'stopped',
+    seconds: 0,
+    laps: new Array().fill(0),
+  });
+  const [timer, setTimer] = useState(0);
   const [pause, setPause] = useState(true);
   const [stop, setStop] = useState(false);
   const [laps, setLaps] = useState<string[]>([]);
@@ -18,9 +50,6 @@ function App(props: P) {
   }
 
   function newLap() {
-    let str = `Lap ${laps.length}: ${timer} seconds!`;
-    const newLaps = [...laps, str];
-    setLaps(newLaps);
     setTimer(0);
   }
 
@@ -159,7 +188,7 @@ function App(props: P) {
             setState('stop');
           }}
         />
-        <BtnLap text="Lap" onClick={() => newLap()} />
+        <BtnLap text="Lap" onClick={() => dispatch({ type: 'LAP' })} />
       </div>
       <div className="p-4">Timer: {timer} seconds!</div>
       <div>LAP:</div>
