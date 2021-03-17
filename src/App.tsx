@@ -1,6 +1,7 @@
-import React, { useState, useReducer, useEffect } from 'react';
+import React, { useState, useReducer, useEffect, useCallback } from 'react';
 import _ from 'lodash/fp';
 import classNames from 'classnames';
+import { constant } from 'lodash';
 
 interface State {
   status: 'stopped' | 'started' | 'paused';
@@ -13,37 +14,39 @@ interface Action {
   payload?: {};
 }
 
-function App() {
+function useMyCustomHook() {
   const [pauseEffect, setPauseEffect] = useState('Pause');
-  const [state, dispatch] = useReducer(reducer, {
+  const reducerFunction = useCallback(
+    (state: State, payload: Action): State => {
+      switch (payload.type) {
+        case 'START':
+          return { ...state, seconds: state.seconds, status: 'started' };
+        case 'STOP':
+          console.log(state);
+          return { ...state, seconds: state.seconds, status: 'stopped' };
+        case 'PAUSE':
+          if (pauseEffect === 'Pause') {
+            setPauseEffect('Play');
+            return { ...state, status: 'paused' };
+          } else {
+            setPauseEffect('Pause');
+            return { ...state, status: 'started' };
+          }
+        case 'RESET':
+          return { status: 'stopped', laps: [], seconds: 0 };
+        case 'LAP':
+          return { ...state, laps: [...state.laps, state.seconds], seconds: 0 };
+        case 'UPDATE':
+          return { ...state, seconds: state.seconds + 1 };
+      }
+    },
+    [],
+  );
+  const [state, dispatch] = useReducer(reducerFunction, {
     status: 'stopped',
     seconds: 0,
     laps: new Array().fill(0),
   });
-
-  function reducer(state: State, payload: Action): State {
-    switch (payload.type) {
-      case 'START':
-        return { ...state, seconds: state.seconds, status: 'started' };
-      case 'STOP':
-        console.log(state);
-        return { ...state, seconds: state.seconds, status: 'stopped' };
-      case 'PAUSE':
-        if (pauseEffect === 'Pause') {
-          setPauseEffect('Play');
-          return { ...state, status: 'paused' };
-        } else {
-          setPauseEffect('Pause');
-          return { ...state, status: 'started' };
-        }
-      case 'RESET':
-        return { status: 'stopped', laps: [], seconds: 0 };
-      case 'LAP':
-        return { ...state, laps: [...state.laps, state.seconds], seconds: 0 };
-      case 'UPDATE':
-        return { ...state, seconds: state.seconds + 1 };
-    }
-  }
 
   useEffect(() => {
     if (state.status === 'paused') {
@@ -53,6 +56,7 @@ function App() {
 
     if (state.status === 'stopped') {
       console.log('stoppato');
+      state.seconds = 0;
       return;
     }
 
@@ -148,6 +152,29 @@ function App() {
       </button>
     );
   }
+  return {
+    state,
+    BtnStart,
+    BtnStop,
+    BtnPause,
+    BtnReset,
+    BtnLap,
+    pauseEffect,
+    dispatch,
+  };
+}
+
+function App() {
+  const {
+    state,
+    BtnStart,
+    BtnStop,
+    BtnPause,
+    BtnReset,
+    BtnLap,
+    pauseEffect,
+    dispatch,
+  } = useMyCustomHook();
 
   return (
     <>
