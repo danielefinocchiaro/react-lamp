@@ -9,48 +9,63 @@ interface State {
 }
 
 interface Action {
-  type: 'START' | 'STOP' | 'PAUSE' | 'RESET' | 'LAP';
-  //payload: {};
-}
-
-function reducer(state: State, payload: Action) {
-  switch (payload.type) {
-    case 'START':
-      return;
-    case 'STOP':
-      return;
-    case 'PAUSE':
-      return;
-    case 'RESET':
-      return;
-    case 'LAP':
-      let str = `Lap ${state.laps.length}: ${state.seconds} seconds!`;
-      const newLaps = [...state.laps, str];
-      state.seconds = 0;
-      return newLaps;
-  }
-  return state;
+  type: 'START' | 'STOP' | 'PAUSE' | 'RESET' | 'LAP' | 'UPDATE';
+  payload?: {};
 }
 
 function App() {
+  const [pauseEffect, setPauseEffect] = useState('Pause');
   const [state, dispatch] = useReducer(reducer, {
     status: 'stopped',
     seconds: 0,
     laps: new Array().fill(0),
   });
-  const [timer, setTimer] = useState(0);
-  const [pause, setPause] = useState(true);
-  const [stop, setStop] = useState(false);
-  const [laps, setLaps] = useState<string[]>([]);
-  const [stato, setState] = useState('stop');
+
+  function reducer(state: State, payload: Action): State {
+    switch (payload.type) {
+      case 'START':
+        return { ...state, seconds: state.seconds, status: 'started' };
+      case 'STOP':
+        console.log(state);
+        return { ...state, seconds: state.seconds, status: 'stopped' };
+      case 'PAUSE':
+        if (pauseEffect === 'Pause') {
+          setPauseEffect('Play');
+          return { ...state, status: 'paused' };
+        } else {
+          setPauseEffect('Pause');
+          return { ...state, status: 'started' };
+        }
+      case 'RESET':
+        return { status: 'stopped', laps: [], seconds: 0 };
+      case 'LAP':
+        return { ...state, laps: [...state.laps, state.seconds], seconds: 0 };
+      case 'UPDATE':
+        return { ...state, seconds: state.seconds + 1 };
+    }
+  }
+
+  useEffect(() => {
+    if (state.status === 'paused') {
+      console.log('pausa');
+      return;
+    }
+
+    if (state.status === 'stopped') {
+      console.log('stoppato');
+      return;
+    }
+
+    const counter = setInterval(() => {
+      dispatch({ type: 'UPDATE' });
+    }, 1000);
+
+    return () => clearInterval(counter);
+  }, [state]);
 
   interface Button {
     onClick: () => void;
     text?: string;
-  }
-
-  function newLap() {
-    setTimer(0);
   }
 
   function BtnStart(p: Button) {
@@ -61,7 +76,7 @@ function App() {
     return (
       <button
         className={style}
-        disabled={stato === 'start' ? true : false}
+        disabled={state.status === 'started' ? true : false}
         onClick={p.onClick}
       >
         {p.text}
@@ -77,7 +92,7 @@ function App() {
     return (
       <button
         className={style}
-        disabled={stato === 'stop' ? true : false}
+        disabled={state.status === 'stopped' ? true : false}
         onClick={p.onClick}
       >
         Stop
@@ -93,7 +108,7 @@ function App() {
     return (
       <button
         className={style}
-        disabled={stato === 'stop' ? true : false}
+        disabled={state.status === 'stopped' ? true : false}
         onClick={p.onClick}
       >
         {p.text}
@@ -109,7 +124,7 @@ function App() {
     return (
       <button
         className={style}
-        disabled={stato === 'stop' ? true : false}
+        disabled={state.status === 'stopped' ? true : false}
         onClick={p.onClick}
       >
         {p.text}
@@ -126,7 +141,7 @@ function App() {
     return (
       <button
         className={style}
-        disabled={stato === 'stop' ? true : false}
+        disabled={state.status === 'stopped' ? true : false}
         onClick={p.onClick}
       >
         {p.text}
@@ -134,67 +149,27 @@ function App() {
     );
   }
 
-  useEffect(() => {
-    if (pause) {
-      return;
-    }
-
-    if (stop) {
-      setTimer(0);
-    }
-
-    const counter = setInterval(() => {
-      setTimer((s) => s + 1);
-    }, 1000);
-
-    return () => clearInterval(counter);
-  }, [pause]);
-
-  const [pauseEffect, setPauseEffect] = useState('Pause');
   return (
     <>
       <div className="flex m-4">
-        <BtnStart
-          text="Start"
-          onClick={() => {
-            setPause((p) => !p);
-            setState('start');
-          }}
-        />
-        <BtnStop
-          text="Stop"
-          onClick={() => {
-            setPause((p) => !p);
-            setStop((s) => !s);
-            setState('stop');
-          }}
-        />
+        <BtnStart text="Start" onClick={() => dispatch({ type: 'START' })} />
+        <BtnStop text="Stop" onClick={() => dispatch({ type: 'STOP' })} />
         <BtnPause
-          onClick={() => {
-            setPause((p) => !p);
-            if (pauseEffect === 'Pause') {
-              setPauseEffect('Play');
-            } else {
-              setPauseEffect('Pause');
-            }
-          }}
+          onClick={() => dispatch({ type: 'PAUSE' })}
           text={pauseEffect}
         />
-        <BtnReset
-          text="Reset"
-          onClick={() => {
-            setPause(true);
-            setTimer(0);
-            setState('stop');
-          }}
-        />
+        <BtnReset text="Reset" onClick={() => dispatch({ type: 'RESET' })} />
         <BtnLap text="Lap" onClick={() => dispatch({ type: 'LAP' })} />
       </div>
-      <div className="p-4">Timer: {timer} seconds!</div>
+      <div className="p-4">Timer: {state.seconds} seconds!</div>
       <div>LAP:</div>
       <div>
-        {laps.map((lap, i) => {
-          return <div key={i}>{lap}</div>;
+        {state.laps.map((lap, i) => {
+          return (
+            <div key={i}>
+              Lap {i + 1}: {lap} seconds!
+            </div>
+          );
         })}
       </div>
     </>
