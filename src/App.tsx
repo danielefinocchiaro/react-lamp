@@ -1,7 +1,13 @@
-import React, { useState, useReducer, useEffect, useCallback } from 'react';
+import React, {
+  useState,
+  useReducer,
+  useEffect,
+  useCallback,
+  useContext,
+} from 'react';
 import _ from 'lodash/fp';
 import classNames from 'classnames';
-import { constant } from 'lodash';
+import type { Dispatch } from 'react';
 
 interface State {
   status: 'stopped' | 'started' | 'paused';
@@ -14,26 +20,31 @@ interface Action {
   payload?: {};
 }
 
+interface Context {
+  state: State;
+  dispatch: Dispatch<Action>;
+}
+
 function useMyCustomHook() {
-  const [pauseEffect, setPauseEffect] = useState('Pause');
   const reducerFunction = useCallback(
     (state: State, payload: Action): State => {
       switch (payload.type) {
         case 'START':
-          return { ...state, seconds: state.seconds, status: 'started' };
+          if (state.status === 'stopped') {
+            return { ...state, seconds: 0, status: 'started' };
+          } else {
+            return { ...state, seconds: state.seconds, status: 'started' };
+          }
         case 'STOP':
-          console.log(state);
           return { ...state, seconds: state.seconds, status: 'stopped' };
         case 'PAUSE':
-          if (pauseEffect === 'Pause') {
-            setPauseEffect('Play');
-            return { ...state, status: 'paused' };
-          } else {
-            setPauseEffect('Pause');
+          if (state.status === 'paused') {
             return { ...state, status: 'started' };
+          } else {
+            return { ...state, status: 'paused' };
           }
         case 'RESET':
-          return { status: 'stopped', laps: [], seconds: 0 };
+          return { ...state, status: 'stopped', laps: [], seconds: 0 };
         case 'LAP':
           return { ...state, laps: [...state.laps, state.seconds], seconds: 0 };
         case 'UPDATE':
@@ -50,13 +61,10 @@ function useMyCustomHook() {
 
   useEffect(() => {
     if (state.status === 'paused') {
-      console.log('pausa');
       return;
     }
 
     if (state.status === 'stopped') {
-      console.log('stoppato');
-      state.seconds = 0;
       return;
     }
 
@@ -65,140 +73,135 @@ function useMyCustomHook() {
     }, 1000);
 
     return () => clearInterval(counter);
-  }, [state]);
+  }, [state.status]);
 
-  interface Button {
-    onClick: () => void;
-    text?: string;
-  }
-
-  function BtnStart(p: Button) {
-    const style = classNames(
-      'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-green-500',
-    );
-
-    return (
-      <button
-        className={style}
-        disabled={state.status === 'started' ? true : false}
-        onClick={p.onClick}
-      >
-        {p.text}
-      </button>
-    );
-  }
-
-  function BtnStop(p: Button) {
-    const style = classNames(
-      'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-red-500',
-    );
-
-    return (
-      <button
-        className={style}
-        disabled={state.status === 'stopped' ? true : false}
-        onClick={p.onClick}
-      >
-        Stop
-      </button>
-    );
-  }
-
-  function BtnPause(p: Button) {
-    const style = classNames(
-      'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-blue-500',
-    );
-
-    return (
-      <button
-        className={style}
-        disabled={state.status === 'stopped' ? true : false}
-        onClick={p.onClick}
-      >
-        {p.text}
-      </button>
-    );
-  }
-
-  function BtnReset(p: Button) {
-    const style = classNames(
-      'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-blue-500',
-    );
-
-    return (
-      <button
-        className={style}
-        disabled={state.status === 'stopped' ? true : false}
-        onClick={p.onClick}
-      >
-        {p.text}
-      </button>
-    );
-  }
-
-  function BtnLap(p: Button) {
-    const style = classNames(
-      'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed',
-      p.text === 'Stop' ? 'bg-red-500' : 'bg-yellow-500',
-    );
-
-    return (
-      <button
-        className={style}
-        disabled={state.status === 'stopped' ? true : false}
-        onClick={p.onClick}
-      >
-        {p.text}
-      </button>
-    );
-  }
   return {
     state,
-    BtnStart,
-    BtnStop,
-    BtnPause,
-    BtnReset,
-    BtnLap,
-    pauseEffect,
     dispatch,
   };
 }
 
-function App() {
-  const {
-    state,
-    BtnStart,
-    BtnStop,
-    BtnPause,
-    BtnReset,
-    BtnLap,
-    pauseEffect,
-    dispatch,
-  } = useMyCustomHook();
+function BtnLap() {
+  const { state, dispatch } = useContext(StateContext);
+  const style = classNames(
+    'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed',
+    'bg-yellow-500',
+  );
 
   return (
+    <button
+      className={style}
+      disabled={state.status === 'stopped' ? true : false}
+      onClick={() => dispatch({ type: 'LAP' })}
+    >
+      Lap
+    </button>
+  );
+}
+function BtnStart() {
+  const { state, dispatch } = useContext(StateContext);
+  const style = classNames(
+    'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-green-500',
+  );
+
+  return (
+    <button
+      className={style}
+      disabled={state.status === 'started' ? true : false}
+      onClick={() => dispatch({ type: 'START' })}
+    >
+      Start
+    </button>
+  );
+}
+
+function BtnStop() {
+  const { state, dispatch } = useContext(StateContext);
+
+  const style = classNames(
+    'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-red-500',
+  );
+
+  return (
+    <button
+      className={style}
+      disabled={state.status === 'stopped' ? true : false}
+      onClick={() => dispatch({ type: 'STOP' })}
+    >
+      Stop
+    </button>
+  );
+}
+
+function BtnPause() {
+  const { state, dispatch } = useContext(StateContext);
+
+  const style = classNames(
+    'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-blue-500',
+  );
+
+  return (
+    <button
+      className={style}
+      disabled={state.status === 'stopped' ? true : false}
+      onClick={() => dispatch({ type: 'PAUSE' })}
+    >
+      {state.status === 'paused' ? 'Play' : 'Pause'}
+    </button>
+  );
+}
+
+function BtnReset() {
+  const { state, dispatch } = useContext(StateContext);
+
+  const style = classNames(
+    'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-blue-500',
+  );
+
+  return (
+    <button
+      className={style}
+      disabled={state.status === 'stopped' ? true : false}
+      onClick={() => dispatch({ type: 'RESET' })}
+    >
+      Reset
+    </button>
+  );
+}
+
+const StateContext = React.createContext<Context>({
+  state: {
+    status: 'stopped',
+    seconds: 0,
+    laps: new Array().fill(0),
+  },
+  dispatch: () => {},
+});
+
+function App() {
+  const { state, dispatch } = useMyCustomHook();
+  return (
     <>
-      <div className="flex m-4">
-        <BtnStart text="Start" onClick={() => dispatch({ type: 'START' })} />
-        <BtnStop text="Stop" onClick={() => dispatch({ type: 'STOP' })} />
-        <BtnPause
-          onClick={() => dispatch({ type: 'PAUSE' })}
-          text={pauseEffect}
-        />
-        <BtnReset text="Reset" onClick={() => dispatch({ type: 'RESET' })} />
-        <BtnLap text="Lap" onClick={() => dispatch({ type: 'LAP' })} />
-      </div>
-      <div className="p-4">Timer: {state.seconds} seconds!</div>
-      <div>LAP:</div>
-      <div>
-        {state.laps.map((lap, i) => {
-          return (
-            <div key={i}>
-              Lap {i + 1}: {lap} seconds!
-            </div>
-          );
-        })}
-      </div>
+      <StateContext.Provider value={{ state, dispatch }}>
+        <div className="flex m-4">
+          <BtnStart />
+          <BtnStop />
+          <BtnPause />
+          <BtnReset />
+          <BtnLap />
+        </div>
+        <div className="p-4">Timer: {state.seconds} seconds!</div>
+        <div>LAP:</div>
+        <div>
+          {state.laps.map((lap, i) => {
+            return (
+              <div key={i}>
+                Lap {i + 1}: {lap} seconds!
+              </div>
+            );
+          })}
+        </div>
+      </StateContext.Provider>
     </>
   );
 }
