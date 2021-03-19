@@ -90,7 +90,11 @@ function App() {
 
   function isLastMinute(event: Event) {
     let actualDate = new Date();
-    if (event.timestamp.getTime() > actualDate.getTime() - 60000) return event;
+    if (
+      event.timestamp.getTime() > actualDate.getTime() - 60000 &&
+      event.status === 'LAMPADINA_ACCESA'
+    )
+      return event;
   }
 
   function Counter(p: Event[]) {
@@ -100,11 +104,15 @@ function App() {
   useEffect(() => {
     const counter = setInterval(() => {
       let lastMinute = events.filter(isLastMinute);
-      console.log(lastMinute);
-      let actualDate = new Date();
-      let test = actualDate.g;
-      console.log(test);
-      setSeconds();
+      if (lastMinute.length > 0) {
+        console.log(lastMinute);
+        let actualDate = new Date();
+        let dif = actualDate.getTime() - lastMinute[0].timestamp.getTime();
+        var differenceBetween = Math.floor(dif / 1000);
+        setSeconds(differenceBetween);
+      } else {
+        setSeconds(0);
+      }
     }, 1000);
 
     return () => clearInterval(counter);
