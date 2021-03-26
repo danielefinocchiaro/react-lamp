@@ -13,80 +13,86 @@ interface Event {
   timestamp: Date;
 }
 
+interface Button {
+  onClick: () => void;
+}
+
+interface Counter {
+  seconds: number;
+}
+
+function Counter(p: Counter) {
+  return <div>Seconds in the last minute: {p.seconds}</div>;
+}
+
+function BtnOff(p: Button) {
+  const style = classNames(
+    'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-red-500',
+  );
+
+  return (
+    <button
+      className={style}
+      //disabled={state.status === 'stopped' ? true : false}
+      onClick={() => p.onClick()}
+    >
+      Spento
+    </button>
+  );
+}
+
+function BtnOn(p: Button) {
+  const style = classNames(
+    'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-green-500',
+  );
+
+  return (
+    <button
+      className={style}
+      //disabled={state.status === 'started' ? true : false}
+      onClick={() => p.onClick()}
+    >
+      Acceso
+    </button>
+  );
+}
+
+function Lampada(p: Event[]) {
+  let actualStatus = p[Object.keys(p).length - 1];
+  const style = classNames(
+    'flex flex-grow justify-center h-20',
+    actualStatus.status === 'LAMPADINA_ACCESA'
+      ? 'bg-yellow-500'
+      : 'bg-gray-500',
+  );
+  return <div className={style}>{actualStatus.status}</div>;
+}
+
 function App() {
   const [events, setEvents] = useState<Event[]>([
     { status: 'LAMPADINA_SPENTA', timestamp: new Date() },
   ]);
   const [seconds, setSeconds] = useState<number>(0);
 
-  function BtnOn(p: Event[]) {
-    const style = classNames(
-      'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-green-500',
-    );
+  const setLightOn = useCallback(() => {
+    let actualStatus = events[events.length - 1];
+    if (actualStatus.status === 'LAMPADINA_SPENTA') {
+      setEvents([
+        ...events,
+        { status: 'LAMPADINA_ACCESA', timestamp: new Date() },
+      ]);
+    }
+  }, [events]);
 
-    return (
-      <button
-        className={style}
-        //disabled={state.status === 'started' ? true : false}
-        onClick={() => setLightOn(p)}
-      >
-        Acceso
-      </button>
-    );
-  }
-
-  function BtnOff(p: Event[]) {
-    const style = classNames(
-      'px-3 py-2 mr-2 rounded disabled:opacity-50 disabled:cursor-not-allowed bg-red-500',
-    );
-
-    return (
-      <button
-        className={style}
-        //disabled={state.status === 'stopped' ? true : false}
-        onClick={() => setLightOff(p)}
-      >
-        Spento
-      </button>
-    );
-  }
-
-  function Lampada(p: Event[]) {
-    let actualStatus = p[Object.keys(p).length - 1];
-    const style = classNames(
-      'flex flex-grow justify-center h-20',
-      actualStatus.status === 'LAMPADINA_ACCESA'
-        ? 'bg-yellow-500'
-        : 'bg-gray-500',
-    );
-    return <div className={style}>{actualStatus.status}</div>;
-  }
-
-  const setLightOn = useCallback(
-    (p: Event[]) => {
-      let actualStatus = p[Object.keys(p).length - 1];
-      if (actualStatus.status === 'LAMPADINA_SPENTA') {
-        setEvents([
-          ...events,
-          { status: 'LAMPADINA_ACCESA', timestamp: new Date() },
-        ]);
-      }
-    },
-    [events],
-  );
-
-  const setLightOff = useCallback(
-    (p: Event[]) => {
-      let actualStatus = p[Object.keys(p).length - 1];
-      if (actualStatus.status === 'LAMPADINA_ACCESA') {
-        setEvents([
-          ...events,
-          { status: 'LAMPADINA_SPENTA', timestamp: new Date() },
-        ]);
-      }
-    },
-    [events],
-  );
+  const setLightOff = useCallback(() => {
+    let actualStatus = events[events.length - 1];
+    if (actualStatus.status === 'LAMPADINA_ACCESA') {
+      setEvents([
+        ...events,
+        { status: 'LAMPADINA_SPENTA', timestamp: new Date() },
+      ]);
+    }
+  }, [events]);
 
   function isLastMinute(event: Event) {
     let actualDate = new Date();
@@ -95,10 +101,6 @@ function App() {
       event.status === 'LAMPADINA_ACCESA'
     )
       return event;
-  }
-
-  function Counter(p: Event[]) {
-    return <div>Seconds in the last minute: {seconds}</div>;
   }
 
   useEffect(() => {
@@ -121,8 +123,8 @@ function App() {
   return (
     <>
       <div className="flex-grow justify-center flex m-4">
-        <BtnOn {...events} />
-        <BtnOff {...events} />
+        <BtnOn onClick={() => setLightOn()} />
+        <BtnOff onClick={() => setLightOff()} />
         <button
           onClick={() => {
             console.log(events);
@@ -132,7 +134,7 @@ function App() {
         </button>
       </div>
       <Lampada {...events} />
-      <Counter {...events} />
+      <Counter seconds={seconds} />
     </>
   );
 }
