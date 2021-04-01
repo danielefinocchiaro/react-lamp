@@ -4,6 +4,7 @@ import _ from 'lodash/fp';
 import classNames from 'classnames';
 import { DateTime } from 'luxon';
 import { v4 } from 'uuid';
+import { map } from 'lodash';
 
 interface Event {
   type:
@@ -27,10 +28,17 @@ interface Command {
 }
 
 // Reducer o Projector, legge tutti gli eventi e li proietta o riduce in uno stato.
-function isLightOn(events: Event[]): boolean {
-  const lastEvent = events.reverse().find((elem) => {
-    return elem.type === 'LAMPADINA_ACCESA' || elem.type === 'LAMPADINA_SPENTA';
+function isLightOn(events: Event[], idObj: number): boolean {
+  let LampadinaEvent = events.filter((event) => {
+    return (
+      (event.objId === idObj && event.type === 'LAMPADINA_SPENTA') ||
+      event.type === 'LAMPADINA_ACCESA'
+    );
   });
+  //let ContatoreEvent = events.filter(isContatoreEvent);
+
+  const lastEvent = LampadinaEvent[LampadinaEvent.length - 1];
+
   console.log('lamapda acceso ultimo evento', lastEvent);
   if (lastEvent === undefined) {
     return false;
@@ -40,9 +48,14 @@ function isLightOn(events: Event[]): boolean {
 }
 
 function isContatoreOn(events: Event[]): boolean {
-  const lastEvent = events.find((elem) => {
-    return elem.type === 'CONTATORE_ACCESO' || elem.type === 'CONTATORE_SPENTO';
+  let ContatoreEvent = events.filter((event) => {
+    return (
+      event.type === 'CONTATORE_SPENTO' || event.type === 'CONTATORE_ACCESO'
+    );
   });
+
+  const lastEvent = ContatoreEvent[ContatoreEvent.length - 1];
+
   console.log('contatore acceso ultimo evento', lastEvent);
   if (lastEvent === undefined) {
     return false;
@@ -74,6 +87,37 @@ function Lampadina(props: { isTurnedOn: boolean }) {
   });
   return (
     <div className={className}>{props.isTurnedOn ? 'ACCESA' : 'SPENTA'}</div>
+  );
+}
+
+function Contatore(props: {
+  events: Event[];
+  onClick: (
+    type:
+      | 'ACCENDI_LAMPADINA'
+      | 'SPEGNI_LAMPADINA'
+      | 'ACCENDI_CONTATORE'
+      | 'SPEGNI_CONTATORE',
+  ) => void;
+}) {
+  return (
+    <div className="flex flex-col">
+      <button
+        onClick={() => console.log(isContatoreOn(props.events), props.events)}
+      >
+        Log
+      </button>
+      <Button
+        className="bg-green-300 hover:bg-green-200"
+        title="Accendi cont"
+        onClick={() => props.onClick('ACCENDI_CONTATORE')}
+      />
+      <Button
+        className="bg-red-300 hover:bg-red-200"
+        title="Spegni cont"
+        onClick={() => props.onClick('SPEGNI_CONTATORE')}
+      />
+    </div>
   );
 }
 
@@ -192,6 +236,39 @@ function useEvent() {
   return { events, emitEvent };
 }
 
+function Luce(props: {
+  events: Event[];
+  funCommand: (
+    type:
+      | 'ACCENDI_LAMPADINA'
+      | 'SPEGNI_LAMPADINA'
+      | 'ACCENDI_CONTATORE'
+      | 'SPEGNI_CONTATORE',
+  ) => void;
+  idLamp: number;
+}) {
+  const isTurnedOn = isLightOn(props.events);
+
+  return (
+    <div className="flex flex-col">
+      <Lampadina isTurnedOn={isTurnedOn} />
+
+      <div className="flex">
+        <Button
+          className="bg-yellow-300 hover:bg-yellow-200"
+          title="Accendi"
+          onClick={() => props.funCommand('ACCENDI_LAMPADINA')}
+        />
+        <Button
+          className="bg-gray-300 hover:bg-gray-200"
+          title="Spegni"
+          onClick={() => props.funCommand('SPEGNI_LAMPADINA')}
+        />
+      </div>
+    </div>
+  );
+}
+
 function App() {
   const { events, emitEvent } = useEvent();
   const { commands, sendCommand } = useCommand();
@@ -202,63 +279,21 @@ function App() {
     runBusinessLogic();
   }, [commands]);
 
-  const isTurnedOn = isLightOn(events);
+  let lamp = new Array(3);
 
   return (
     <>
-      <div className="flex flex-col">
-        <button onClick={() => console.log(isContatoreOn(events), events)}>
-          Log
-        </button>
-        <Button
-          className="bg-green-300 hover:bg-green-200"
-          title="Accendi cont"
-          onClick={() => sendCommand('ACCENDI_CONTATORE')}
-        />
-        <Button
-          className="bg-red-300 hover:bg-red-200"
-          title="Spegni cont"
-          onClick={() => sendCommand('SPEGNI_CONTATORE')}
-        />
-      </div>
-      <div className="flex flex-col">
-        <Lampadina isTurnedOn={isTurnedOn} />
+      <Contatore events={events} onClick={sendCommand} />
+      {lamp.fill([]).map((e, i) => {
+        return <Luce events={events} funCommand={sendCommand} idLamp={i} />;
+      })}
 
-        <div className="flex">
-          <Button
-            className="bg-yellow-300 hover:bg-yellow-200"
-            title="Accendi"
-            onClick={() => sendCommand('ACCENDI_LAMPADINA')}
-          />
-          <Button
-            className="bg-gray-300 hover:bg-gray-200"
-            title="Spegni"
-            onClick={() => sendCommand('SPEGNI_LAMPADINA')}
-          />
-        </div>
-
-        {/* <Lampadina isTurnedOn={isTurnedOn} />
-
-        <div className="flex">
-          <Button
-            className="bg-yellow-300 hover:bg-yellow-200"
-            title="Accendi"
-            onClick={() => sendCommand('ACCENDI_LAMPADINA')}
-          />
-          <Button
-            className="bg-gray-300 hover:bg-gray-200"
-            title="Spegni"
-            onClick={() => sendCommand('SPEGNI_LAMPADINA')}
-          />
-        </div> */}
-
-        <div className="flex flex-col m-1 mt-4">
-          {events.map((e) => (
-            <div>
-              {e.type} - {e.timestamp.toString()}
-            </div>
-          ))}
-        </div>
+      <div className="flex flex-col m-1 mt-4">
+        {events.map((e, i) => (
+          <div key={i}>
+            {e.type} - {e.timestamp.toString()}
+          </div>
+        ))}
       </div>
     </>
   );
