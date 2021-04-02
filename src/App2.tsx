@@ -2,16 +2,14 @@ import React, { useState, useEffect } from 'react';
 
 import _ from 'lodash/fp';
 import classNames from 'classnames';
-import { DateTime } from 'luxon';
 import { v4 } from 'uuid';
-import { map } from 'lodash';
 
 interface Event {
   type:
     | 'LAMPADINA_ACCESA'
     | 'LAMPADINA_SPENTA'
     | 'CONTATORE_ACCESO'
-    | 'CONTATORE_SPENTO'; // LAMPADINA_SPENTA O LAMPADINA_ACCESA;
+    | 'CONTATORE_SPENTO';
   timestamp: Date;
   traceId: string;
   objId?: number;
@@ -31,15 +29,13 @@ interface Command {
 function isLightOn(events: Event[], idObj: number): boolean {
   let LampadinaEvent = events.filter((event) => {
     return (
-      (event.objId === idObj && event.type === 'LAMPADINA_SPENTA') ||
-      event.type === 'LAMPADINA_ACCESA'
+      event.objId === idObj &&
+      (event.type === 'LAMPADINA_SPENTA' || event.type === 'LAMPADINA_ACCESA')
     );
   });
-  //let ContatoreEvent = events.filter(isContatoreEvent);
 
   const lastEvent = LampadinaEvent[LampadinaEvent.length - 1];
 
-  console.log('lamapda acceso ultimo evento', lastEvent);
   if (lastEvent === undefined) {
     return false;
   } else {
@@ -56,13 +52,45 @@ function isContatoreOn(events: Event[]): boolean {
 
   const lastEvent = ContatoreEvent[ContatoreEvent.length - 1];
 
-  console.log('contatore acceso ultimo evento', lastEvent);
   if (lastEvent === undefined) {
     return false;
   } else {
-    console.log('CONTATORE acceso', lastEvent.type === 'CONTATORE_ACCESO');
     return lastEvent.type === 'CONTATORE_ACCESO';
   }
+}
+
+function Luce(props: {
+  events: Event[];
+  doCommand: (
+    type:
+      | 'ACCENDI_LAMPADINA'
+      | 'SPEGNI_LAMPADINA'
+      | 'ACCENDI_CONTATORE'
+      | 'SPEGNI_CONTATORE',
+    idObj: number,
+  ) => void;
+  idLamp: number;
+}) {
+  const isTurnedOn = isLightOn(props.events, props.idLamp);
+  const isTurnedOnCont = isContatoreOn(props.events);
+  return (
+    <div className="flex flex-col">
+      <Lampadina isTurnedOn={isTurnedOn} isTurnedOnCont={isTurnedOnCont} />
+
+      <div className="flex">
+        <Button
+          className="bg-yellow-300 hover:bg-yellow-200"
+          title="Accendi"
+          onClick={() => props.doCommand('ACCENDI_LAMPADINA', props.idLamp)}
+        />
+        <Button
+          className="bg-gray-300 hover:bg-gray-200"
+          title="Spegni"
+          onClick={() => props.doCommand('SPEGNI_LAMPADINA', props.idLamp)}
+        />
+      </div>
+    </div>
+  );
 }
 
 function Button(props: {
@@ -81,9 +109,9 @@ function Button(props: {
   );
 }
 
-function Lampadina(props: { isTurnedOn: boolean }) {
+function Lampadina(props: { isTurnedOn: boolean; isTurnedOnCont: boolean }) {
   const className = classNames('m-1 text-center p-2 rounded bg-gray-300', {
-    'bg-yellow-400': props.isTurnedOn,
+    'bg-yellow-400': props.isTurnedOn && props.isTurnedOnCont,
   });
   return (
     <div className={className}>{props.isTurnedOn ? 'ACCESA' : 'SPENTA'}</div>
@@ -121,21 +149,6 @@ function Contatore(props: {
   );
 }
 
-//  UTENTE
-//    |
-//  invia
-//    |
-// COMANDO rappresenta l'intezione di dell'utente di interagire con il sistema  ====> [DB COMANDI] Write Store
-//    |
-//    |
-// - [ LOGICA DI BUSINESS  ] -------------------------------------------------------------
-//    |
-//    |
-// EVENTO rapprenta un cambiamento di stato già accaduto nel sistema   ====> [DB EVENTI] Read Store
-//   |
-//   |
-// UTENTE vede il cambio di stato nel sistema
-
 function useCommand() {
   const [commands, setCommands] = useState<Command[]>([]);
 
@@ -148,17 +161,10 @@ function useCommand() {
     obj?: number,
   ) {
     // Scrivere sul db dei comandi, il comando che l'utente mi istruiscre.
-    if (obj !== null) {
-      setCommands((prev) => [
-        ...prev,
-        { type, timestamp: new Date(), traceId: v4(), objId: obj },
-      ]);
-    } else {
-      setCommands((prev) => [
-        ...prev,
-        { type, timestamp: new Date(), traceId: v4() },
-      ]);
-    }
+    setCommands((prev) => [
+      ...prev,
+      { type, timestamp: new Date(), traceId: v4(), objId: obj },
+    ]);
   }
 
   return { commands, sendCommand };
@@ -174,6 +180,7 @@ function useBusinessLogic(
       | 'CONTATORE_ACCESO'
       | 'CONTATORE_SPENTO',
     traceId: string,
+    idObj?: number,
   ) => void,
 ) {
   const [position, setPosition] = useState(-1);
@@ -181,16 +188,15 @@ function useBusinessLogic(
     // Leggere i comandi che l'utente manda, gestice la logica applicative ed emettere gli eventi per i cambi di stato.
     commands.forEach((command, index) => {
       if (index > position) {
-        //console.log('Eseguo comando', command);
         switch (command.type) {
           case 'ACCENDI_LAMPADINA':
-            if (!isLightOn(events) && isContatoreOn(events)) {
-              emitEvent('LAMPADINA_ACCESA', command.traceId);
+            if (!isLightOn(events, command.objId) && isContatoreOn(events)) {
+              emitEvent('LAMPADINA_ACCESA', command.traceId, command.objId);
             }
             break;
           case 'SPEGNI_LAMPADINA':
-            if (isLightOn(events) && isContatoreOn(events)) {
-              emitEvent('LAMPADINA_SPENTA', command.traceId);
+            if (isLightOn(events, command.objId) && isContatoreOn(events)) {
+              emitEvent('LAMPADINA_SPENTA', command.traceId, command.objId);
             }
             break;
           case 'SPEGNI_CONTATORE':
@@ -225,48 +231,16 @@ function useEvent() {
       | 'CONTATORE_ACCESO'
       | 'CONTATORE_SPENTO',
     traceId?: string,
+    idObj?: number,
   ) {
     // Scrive sul db degli eventi, l'evento che il sistema ha emesso.
     setEvents((prev) => [
       ...prev,
-      { type, timestamp: new Date(), traceId: traceId ?? v4() },
+      { type, timestamp: new Date(), traceId: traceId ?? v4(), objId: idObj },
     ]);
   }
 
   return { events, emitEvent };
-}
-
-function Luce(props: {
-  events: Event[];
-  funCommand: (
-    type:
-      | 'ACCENDI_LAMPADINA'
-      | 'SPEGNI_LAMPADINA'
-      | 'ACCENDI_CONTATORE'
-      | 'SPEGNI_CONTATORE',
-  ) => void;
-  idLamp: number;
-}) {
-  const isTurnedOn = isLightOn(props.events);
-
-  return (
-    <div className="flex flex-col">
-      <Lampadina isTurnedOn={isTurnedOn} />
-
-      <div className="flex">
-        <Button
-          className="bg-yellow-300 hover:bg-yellow-200"
-          title="Accendi"
-          onClick={() => props.funCommand('ACCENDI_LAMPADINA')}
-        />
-        <Button
-          className="bg-gray-300 hover:bg-gray-200"
-          title="Spegni"
-          onClick={() => props.funCommand('SPEGNI_LAMPADINA')}
-        />
-      </div>
-    </div>
-  );
 }
 
 function App() {
@@ -285,7 +259,9 @@ function App() {
     <>
       <Contatore events={events} onClick={sendCommand} />
       {lamp.fill([]).map((e, i) => {
-        return <Luce events={events} funCommand={sendCommand} idLamp={i} />;
+        return (
+          <Luce events={events} doCommand={sendCommand} idLamp={i} key={i} />
+        );
       })}
 
       <div className="flex flex-col m-1 mt-4">
@@ -300,3 +276,17 @@ function App() {
 }
 
 export default App;
+//  UTENTE
+//    |
+//  invia
+//    |
+// COMANDO rappresenta l'intezione di dell'utente di interagire con il sistema  ====> [DB COMANDI] Write Store
+//    |
+//    |
+// - [ LOGICA DI BUSINESS  ] -------------------------------------------------------------
+//    |
+//    |
+// EVENTO rapprenta un cambiamento di stato già accaduto nel sistema   ====> [DB EVENTI] Read Store
+//   |
+//   |
+// UTENTE vede il cambio di stato nel sistema
