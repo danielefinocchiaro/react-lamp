@@ -10,6 +10,7 @@ import * as Icons from 'react-icons/all';
 import 'normalize.css';
 import '@blueprintjs/core/lib/css/blueprint.css';
 import '@blueprintjs/icons/lib/css/blueprint-icons.css';
+import { Intent } from '@blueprintjs/core';
 
 interface payloadEvent {
   timestamp: Date;
@@ -124,7 +125,7 @@ function Luce(props: {
   const isTurnedOn = isLightOn(props.events, props.idLamp);
   const isTurnedOnCont = isContatoreOn(props.events);
   return (
-    <div className="flex flex-col border border-gray-300 shadow-lg rounded-lg mx-6 p-8">
+    <div className="flex flex-col border border-gray-300 shadow-lg rounded-lg mx-6 mb-6 p-8">
       <div className="flex justify-center">
         <Blueprint.Icon
           icon={'lightbulb'}
@@ -141,15 +142,23 @@ function Luce(props: {
       <Lampadina isTurnedOn={isTurnedOn} isTurnedOnCont={isTurnedOnCont} />
 
       <div className="flex justify-between">
-        <Button
-          className="bg-yellow-300 hover:bg-yellow-200"
-          title="Accendi"
+        <Blueprint.Button
+          text={'Accendi'}
+          type={'button'}
           onClick={() => props.doCommand('ACCENDI_LAMPADINA', props.idLamp)}
+          active={true}
+          intent={'warning'}
+          outlined={false}
+          disabled={isTurnedOn === true ? true : false}
         />
-        <Button
-          className="bg-gray-300 hover:bg-gray-200"
-          title="Spegni"
+        <Blueprint.Button
+          text={'Spegni'}
+          type={'button'}
           onClick={() => props.doCommand('SPEGNI_LAMPADINA', props.idLamp)}
+          active={true}
+          intent={'none'}
+          outlined={true}
+          disabled={isTurnedOn === false ? true : false}
         />
       </div>
     </div>
@@ -191,6 +200,7 @@ function Contatore(props: {
       | 'SPEGNI_CONTATORE',
   ) => void;
 }) {
+  const isContOn = isContatoreOn(props.events);
   return (
     <div className="flex flex-col -mt-2 border border-gray-300 rounded p-2 shadow-sm border-t-0">
       {/* <button
@@ -198,15 +208,25 @@ function Contatore(props: {
       >
         Log
       </button> */}
-      <Button
-        className="bg-green-300 hover:bg-green-200"
-        title="Accendi contatore"
+      <Blueprint.Button
+        className="m-1"
+        text="Accendi contatore"
+        type="button"
         onClick={() => props.onClick('ACCENDI_CONTATORE')}
+        active={true}
+        intent="success"
+        outlined={false}
+        disabled={isContOn === true ? true : false}
       />
-      <Button
-        className="bg-red-300 hover:bg-red-200"
-        title="Spegni contatore"
+      <Blueprint.Button
+        className="m-1"
+        text="Spegni contatore"
+        type="button"
         onClick={() => props.onClick('SPEGNI_CONTATORE')}
+        active={true}
+        intent="danger"
+        outlined={false}
+        disabled={isContOn === false ? true : false}
       />
     </div>
   );
@@ -340,7 +360,7 @@ function App() {
     runBusinessLogic();
   }, [commands]);
 
-  let lamp = new Array(3);
+  let lamp = new Array(27);
 
   return (
     <>
